@@ -1,0 +1,41 @@
+docker-compose up -d
+
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @register-sqlserver.json
+
+curl -X DELETE http://localhost:8083/connectors/inventory-connector
+
+kafka-console-consumer --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic server1.testDB.dbo.customers
+
+kafka-console-consumer --bootstrap-server kafka:9092 --from-beginning --property print.key=true --property value.deserializer=io.confluent.kafka.serializers.KafkaAvroDeserializer --property schema.registry.url=http://schema-registry:8081 --topic server1.testDB.dbo.customers
+
+cat createConstraint.cypher | docker exec --interactive neo4j bin/cypher-shell -u neo4j -p connect --format verbose
+
+curl -i -X POST -H 'Accept:application/json' -H 'Content-Type:application/json' http://localhost:8084/connectors -d @neo4j-connect-config.json
+
+curl -X DELETE http://localhost:8084/connectors/Neo4jSinkConnector
+
+docker volume rm 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

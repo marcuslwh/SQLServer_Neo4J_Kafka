@@ -1,0 +1,45 @@
+This is a guide on how to do real time data streams in Windows between microsoft sql server as a source database and neo4j as a sink database using Kafka and Docker.
+
+1. Download all the attachments and place them in your preferred directory. Open the folder in VS Code.
+
+2. Run the docker-compose file (install Docker Desktop first if you have not, which itself requires a WSL 2 backend and an appropriately updated version of Windows):
+
+docker-compose up -d
+
+You will see all your containers running in Docker Desktop. Give a minute or two for the containers to run.
+
+3. Initialize the sql server database and enable change data capture (CDC) on the database and tables. Open SSMS, connect to the service and create a new query and copy and paste the contents of the debezium-sqlserver-init.txt file to create a test database and tables, as well as enable CDC in them.
+
+4. register the configuration for the debezium connector between sql server and the kafka broker:
+
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @register-sqlserver.json
+
+5. You should now be able to see the messages coming into kafka. Open up the docker container for kafka. Go to the terminal and run the following:
+
+kafka-console-consumer --bootstrap-server kafka:9092 --from-beginning --property print.key=true --topic server1.testDB.dbo.customers
+
+You should be able to see messages pertaining to the rows created in the customers table from the beggining. If you went into SSMS and created a new row, you will see the corresponding message in the kafka terminal.
+
+6. Go here: https://www.confluent.io/hub/neo4j/kafka-connect-neo4j and download the neo4j connector. Go into the files page for the docker connect service. Go to usr > share > confluent-hub-components. Drag and drop the neo4j-kafka-connect-neo4j-5.0.2 directory into the confluent-hub-components directory. Restart the container.
+
+7. Create the contraint for neo4j:
+
+cat createConstraint.cypher | docker exec --interactive neo4j bin/cypher-shell -u neo4j -p connect --format verbose
+
+8. Register the configuration between the kafka broker and neo4j:
+
+curl -i -X POST -H 'Accept:application/json' -H 'Content-Type:application/json' http://localhost:8084/connectors -d @neo4j-connect-config.json
+
+9. Open docker desktop and proceed to the link that brings you to the neo4j browser of your neo4j service. You should be able to see all the customer nodes created, corresponding to all the rows created in the customers table in sql server. If you were to create a new row in sql server, you should be able to see the corresponding customer node created in neo4j browser.
+
+REFERENCES
+Docker documentation: https://docs.docker.com/
+Kafka documentation: https://kafka.apache.org/documentation/
+confluent documentation: https://docs.confluent.io/platform/current/overview.html
+Debezium connector for sql server: https://debezium.io/documentation/reference/stable/connectors/sqlserver.html
+Debezium tutorial: https://github.com/debezium/debezium-examples/tree/main/tutorial
+Real time data streams between mysql and neo4j using kafka (note that following this exactly does not work): https://github.com/alfredorubin96/kafkaCDCdemo/blob/main/my_sql_to_neo4j/hands-on.adoc
+
+
+
+
